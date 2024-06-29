@@ -40,9 +40,9 @@ class CameraApp:
 
     def left_click(self):
         """Simulate a left mouse click."""
-        kmNet.left(1)
+        kmNet.enc_left(1)
         time.sleep(np.random.uniform(0.08, 0.17))
-        kmNet.left(0)
+        kmNet.enc_left(0)
 
     def toggle_thread(self):
         """Toggle the state of the capture thread."""
@@ -90,7 +90,7 @@ class CameraApp:
                 move_y = new_y - current_y
                 if abs(new_x - start_x - x) <= 3 and abs(new_y - start_y - y) <= 3:
                     break
-                kmNet.move(move_x, move_y)
+                kmNet.enc_move(move_x, move_y)
                 time.sleep(0.001)
 
                 # Check if cursor position has been manually changed

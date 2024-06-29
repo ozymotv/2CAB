@@ -1,0 +1,12 @@
+json
+logging
+argparse
+pywin32
+numpy
+cv2
+time
+math
+dxcam
+threading
+tkinter
+ttk

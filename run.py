@@ -9,6 +9,7 @@ import logging
 import threading
 import json
 import argparse
+import curses
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -136,6 +137,28 @@ class CameraApp:
         logging.info("Starting application.")
         self.toggle_thread()  # Start the thread initially
 
+    def display_ui(self, stdscr):
+        """Display UI using curses."""
+        stdscr.clear()
+        stdscr.addstr(0, 0, f"This is a concept aimbot made by ozymo. Version %version")
+        stdscr.addstr(2, 0, "F2: Exit program")
+        stdscr.addstr(3, 0, "F3: Pause/Unpause aimbot")
+        stdscr.addstr(4, 0, "F4: Reload config")
+        stdscr.refresh()
+
+        while True:
+            key = stdscr.getch()
+            if key == curses.KEY_F2:
+                break
+            elif key == curses.KEY_F3:
+                self.toggle_thread()
+                stdscr.addstr(6, 0, f"Aimbot {'paused' if not self.thread_running else 'unpaused'}.")
+                stdscr.refresh()
+            elif key == curses.KEY_F4:
+                # Reload config (not implemented in this snippet)
+                stdscr.addstr(7, 0, "Config reloaded (not implemented in this snippet).")
+                stdscr.refresh()
+
 if __name__ == "__main__":
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Camera App with Threaded Capture")
@@ -155,4 +178,9 @@ if __name__ == "__main__":
 
     # Initialize the application with loaded configuration
     app = CameraApp(config)
+
+    # Initialize curses and start UI
+    curses.wrapper(app.display_ui)
+
+    # Start the application
     app.run()

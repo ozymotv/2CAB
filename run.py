@@ -1,4 +1,3 @@
-import kmNet
 import win32api
 import numpy as np
 import cv2
@@ -9,15 +8,11 @@ import logging
 import threading
 import json
 import argparse
-import curses
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Constants for color detection bounds
 LOWER_BOUND = np.array([190, 40, 190])
 UPPER_BOUND = np.array([310, 160, 310])
-LEFT_MOUSE_BUTTON = 0x01
+DEFAULT_TRIGGER_KEY = 0x01
 
 class CameraApp:
     def __init__(self, config):
@@ -26,17 +21,17 @@ class CameraApp:
         self.thread_lock = threading.Lock()
 
         # Initialize with config values
-        self.ip = config['kmNet']['ip']
-        self.port = config['kmNet']['port']
-        self.uid = config['kmNet']['uid']
-        self.speed = config['movement']['defaultSpeed']
-        self.fov = config['movement']['defaultFOV']
-        self.trigger_button = int(config['triggerKey']['keyCode'], 16)
+        self.ip = config.get('kmNet', {}).get('ip')
+        self.port = config.get('kmNet', {}).get('port')
+        self.uid = config.get('kmNet', {}).get('uid')
+        self.default_speed = config.get('movement', {}).get('defaultSpeed', 6.50)
+        self.default_fov = config.get('movement', {}).get('defaultFOV', 3)
+        self.trigger_key = int(config.get('triggerKey', {}).get('keyCode'), 16)
 
-        self.SCREEN_WIDTH = win32api.GetSystemMetrics(0)
-        self.SCREEN_HEIGHT = win32api.GetSystemMetrics(1)
-        self.middle_x = self.SCREEN_WIDTH // 2
-        self.middle_y = self.SCREEN_HEIGHT // 2
+        self.screen_width = win32api.GetSystemMetrics(0)
+        self.screen_height = win32api.GetSystemMetrics(1)
+        self.middle_x = self.screen_width // 2
+        self.middle_y = self.screen_height // 2
         self.update_grab_zone()
 
     def left_click(self):
@@ -57,46 +52,46 @@ class CameraApp:
 
     def update_speed(self, value):
         """Update the speed variable."""
-        self.speed = float(value)
+        self.default_speed = float(value)
 
     def update_fov(self, value):
         """Update the FOV variable."""
-        self.fov = int(round(float(value)))
+        self.default_fov = int(round(float(value)))
         self.update_grab_zone()
 
     def update_grab_zone(self):
         """Update the GRAB_ZONE based on the current FOV."""
-        self.zone = self.fov * 10
-        self.GRAB_ZONE = (
-            int(self.SCREEN_WIDTH / 2 - self.zone),
-            int(self.SCREEN_HEIGHT / 2 - self.zone),
-            int(self.SCREEN_WIDTH / 2 + self.zone),
-            int(self.SCREEN_HEIGHT / 2 + self.zone),
+        zone = self.default_fov * 10
+        self.grab_zone = (
+            int(self.screen_width / 2 - zone),
+            int(self.screen_height / 2 - zone),
+            int(self.screen_width / 2 + zone),
+            int(self.screen_height / 2 + zone),
         )
 
-    def smooth_move(self, x, y, speed):
+    def smooth_move(self, target_x, target_y):
         """Smoothly move the cursor to a target position."""
         start_x, start_y = win32api.GetCursorPos()
-        distance = math.sqrt(x**2 + y**2)
-        num_steps = max(int(distance / (speed * 0.2)), 1)
-        step_x = x / num_steps
-        step_y = y / num_steps
+        distance = math.sqrt((target_x - start_x)**2 + (target_y - start_y)**2)
+        num_steps = max(int(distance / (self.default_speed * 0.2)), 1)
+        step_x = (target_x - start_x) / num_steps
+        step_y = (target_y - start_y) / num_steps
 
         for i in range(num_steps):
-            if win32api.GetKeyState(self.trigger_button) < 0:
+            if win32api.GetKeyState(self.trigger_key) < 0:
                 new_x = int(start_x + (i + 1) * step_x)
                 new_y = int(start_y + (i + 1) * step_y)
                 current_x, current_y = win32api.GetCursorPos()
                 move_x = new_x - current_x
                 move_y = new_y - current_y
-                if abs(new_x - start_x - x) <= 3 and abs(new_y - start_y - y) <= 3:
+                if abs(new_x - start_x - (target_x - start_x)) <= 3 and abs(new_y - start_y - (target_y - start_y)) <= 3:
                     break
                 kmNet.enc_move(move_x, move_y)
                 time.sleep(0.001)
 
                 # Check if cursor position has been manually changed
                 if win32api.GetCursorPos() != (new_x, new_y):
-                    self.smooth_move(new_x - current_x, new_y - current_y, speed)
+                    self.smooth_move(new_x - current_x, new_y - current_y)
                     break
 
     def check_rgb_values(self, frame):
@@ -105,8 +100,8 @@ class CameraApp:
         coordinates = cv2.findNonZero(mask)
         if coordinates is not None and coordinates.size > 0:
             xpos, ypos = coordinates[0][0]
-            xpos += self.GRAB_ZONE[0]
-            ypos += self.GRAB_ZONE[1] + 3
+            xpos += self.grab_zone[0]
+            ypos += self.grab_zone[1] + 3
             return True, xpos, ypos
         return False, None, None
 
@@ -114,50 +109,28 @@ class CameraApp:
         """Main function to process the frame."""
         color_present, x, y = self.check_rgb_values(frame)
         if color_present:
-            self.smooth_move(x - self.middle_x, y - self.middle_y, self.speed)
+            self.smooth_move(x - self.middle_x, y - self.middle_y)
 
     def threaded_capture(self):
         """Capture frames in a separate thread."""
         while self.thread_running:
-            if win32api.GetKeyState(self.trigger_button) < 0:
+            if win32api.GetKeyState(self.trigger_key) < 0:
                 try:
-                    screenshot = self.camera.grab(region=self.GRAB_ZONE)
+                    screenshot = self.camera.grab(region=self.grab_zone)
                     if screenshot is not None:
                         self.main_process(screenshot)
                 except Exception as e:
                     logging.error(f'Error: {e}')
         self.camera.release()
 
-    def save_trigger(self, key_code):
+    def save_trigger_key(self, key_code):
         """Save the trigger key code."""
-        self.trigger_button = int(key_code, 16)
+        self.trigger_key = int(key_code, 16)
 
     def run(self):
         """Run the application."""
         logging.info("Starting application.")
         self.toggle_thread()  # Start the thread initially
-
-    def display_ui(self, stdscr):
-        """Display UI using curses."""
-        stdscr.clear()
-        stdscr.addstr(0, 0, f"This is a concept aimbot made by ozymo. Version %version")
-        stdscr.addstr(2, 0, "F2: Exit program")
-        stdscr.addstr(3, 0, "F3: Pause/Unpause aimbot")
-        stdscr.addstr(4, 0, "F4: Reload config")
-        stdscr.refresh()
-
-        while True:
-            key = stdscr.getch()
-            if key == curses.KEY_F2:
-                break
-            elif key == curses.KEY_F3:
-                self.toggle_thread()
-                stdscr.addstr(6, 0, f"Aimbot {'paused' if not self.thread_running else 'unpaused'}.")
-                stdscr.refresh()
-            elif key == curses.KEY_F4:
-                # Reload config (not implemented in this snippet)
-                stdscr.addstr(7, 0, "Config reloaded (not implemented in this snippet).")
-                stdscr.refresh()
 
 if __name__ == "__main__":
     # Parse command-line arguments
@@ -178,9 +151,4 @@ if __name__ == "__main__":
 
     # Initialize the application with loaded configuration
     app = CameraApp(config)
-
-    # Initialize curses and start UI
-    curses.wrapper(app.display_ui)
-
-    # Start the application
     app.run()

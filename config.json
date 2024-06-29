@@ -1,0 +1,14 @@
+{
+  "kmNet": {
+    "ip": "192.168.2.188",
+    "port": "port",
+    "uid": "uuid"
+  },
+  "movement": {
+    "defaultSpeed": 6.50,
+    "defaultFOV": 3
+  },
+  "triggerKey": {
+    "keyCode": "0x01"
+  }
+}

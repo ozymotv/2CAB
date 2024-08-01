@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import win32api
 from capture import Capture
 from mouse import Mouse
 from settings import Settings
@@ -19,13 +20,7 @@ class Colorbot:
         self.AIMBOT_KEY = int(self.settings.get('AIMBOT', 'toggleKey'), 16)
         self.ALT_AIMBOT_KEY = int(self.settings.get('AIMBOT', 'altToggleKey'), 16)
         self.TARGET_OFFSET = float(self.settings.get('AIMBOT', 'targetOffset'))
-        
-        # Handle missing 'fov' key
-        try:
-            self.FOV = float(self.settings.get('AIMBOT', 'fov'))
-        except (KeyError, ValueError):
-            print("FOV not found in config. Setting default value.")
-            self.FOV = 103  # default value, change as needed
+        self.FOV = float(self.settings.get('AIMBOT', 'fov'))
 
     def get_colors(self):
         lower_color = np.array([140, 120, 180])

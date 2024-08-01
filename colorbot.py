@@ -1,17 +1,14 @@
 import cv2
 import numpy as np
-import win32api
 from capture import Capture
 from mouse import Mouse
 from settings import Settings
 
 class Colorbot:
-    settings = Settings()
-
-    def __init__(self, x, y, xfov, yfov, region=None):
+    def __init__(self, x, y, xfov, yfov):
         self.settings = Settings()
         self.mouse = Mouse()
-        self.grabber = Capture(x, y, xfov, yfov, region)
+        self.grabber = Capture(x, y, xfov, yfov)
         self.LOWER_COLOR, self.UPPER_COLOR = self.get_colors()
         self.toggled = False
         self.configure()
@@ -22,13 +19,19 @@ class Colorbot:
         self.AIMBOT_KEY = int(self.settings.get('AIMBOT', 'toggleKey'), 16)
         self.ALT_AIMBOT_KEY = int(self.settings.get('AIMBOT', 'altToggleKey'), 16)
         self.TARGET_OFFSET = float(self.settings.get('AIMBOT', 'targetOffset'))
-        self.FOV = float(self.settings.get('AIMBOT', 'fov'))
+        
+        # Handle missing 'fov' key
+        try:
+            self.FOV = float(self.settings.get('AIMBOT', 'fov'))
+        except (KeyError, ValueError):
+            print("FOV not found in config. Setting default value.")
+            self.FOV = 103  # default value, change as needed
 
     def get_colors(self):
         lower_color = np.array([140, 120, 180])
         upper_color = np.array([160, 200, 255])
         return lower_color, upper_color
-        
+
     def listen(self):
         while True:
             if win32api.GetAsyncKeyState(self.AIMBOT_KEY) < 0 or win32api.GetAsyncKeyState(self.ALT_AIMBOT_KEY) < 0:
@@ -62,14 +65,4 @@ class Colorbot:
             cY = y + int(h * self.TARGET_OFFSET)
             x_diff = cX - self.grabber.xfov // 2
             y_diff = cY - self.grabber.yfov // 2
-
-            # Calculate mouse movement based on FOV
-            mx, my = self.calculate_fov(x_diff, y_diff)
-            self.mouse.move(mx, my)
-
-    def calculate_fov(self, x_diff, y_diff):
-        # Adjust this based on your game's FOV
-        # Example for converting screen offsets to mouse movement
-        dx = x_diff * 2  # Adjust scaling factor as needed
-        dy = y_diff * 2  # Adjust scaling factor as needed
-        return dx, dy
+            self.mouse.move(self.xspeed() * x_diff, self.yspeed() * y_diff)

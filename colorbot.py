@@ -1,8 +1,6 @@
 import cv2
 import numpy as np
 import win32api
-import math
-import pyautogui
 from capture import Capture
 from mouse import Mouse
 from settings import Settings
@@ -10,56 +8,31 @@ from settings import Settings
 class Colorbot:
     settings = Settings()
 
-    def __init__(self, x, y, xfov=None, yfov=None, game_fov=103):
+    def __init__(self, x, y, xfov, yfov, region=None):
         self.settings = Settings()
         self.mouse = Mouse()
-
-        # Auto-detect screen resolution if xfov and yfov are not provided
-        if xfov is None or yfov is None:
-            screen_width, screen_height = pyautogui.size()
-            xfov = screen_width
-            yfov = screen_height
-
-        self.grabber = Capture(x, y, xfov, yfov)
+        self.grabber = Capture(x, y, xfov, yfov, region)
         self.LOWER_COLOR, self.UPPER_COLOR = self.get_colors()
         self.toggled = False
         self.configure()
 
-        # Calculate Cx and Cy based on the game's FOV
-        self.Cx, self.Cy = self.calculate_fov_constants(game_fov, xfov, yfov)
-
     def configure(self):
+        self.xspeed = lambda: self.settings.get_float('AIMBOT', 'xSpeed')
+        self.yspeed = lambda: self.settings.get_float('AIMBOT', 'ySpeed')
         self.AIMBOT_KEY = int(self.settings.get('AIMBOT', 'toggleKey'), 16)
         self.ALT_AIMBOT_KEY = int(self.settings.get('AIMBOT', 'altToggleKey'), 16)
         self.TARGET_OFFSET = float(self.settings.get('AIMBOT', 'targetOffset'))
+        self.FOV = float(self.settings.get('AIMBOT', 'fov'))
 
     def get_colors(self):
         lower_color = np.array([140, 120, 180])
         upper_color = np.array([160, 200, 255])
         return lower_color, upper_color
-
-    def calculate_fov_constants(self, fov_degrees, screen_width, screen_height):
-        # Convert FOV from degrees to radians
-        fov_radians = fov_degrees * math.pi / 180
-
-        # Calculate Cx and Cy based on the screen dimensions and FOV
-        Cx = screen_width / (2 * math.tan(fov_radians / 2))
-        Cy = screen_height / (2 * math.tan(fov_radians / 2))
-        return Cx, Cy
-
+        
     def listen(self):
         while True:
             if win32api.GetAsyncKeyState(self.AIMBOT_KEY) < 0 or win32api.GetAsyncKeyState(self.ALT_AIMBOT_KEY) < 0:
                 self.process()
-
-    def fov(self, ax, ay, px, py):
-        dx = (ax - px / 2) * 1.5
-        dy = (ay - py / 2) * 1.5
-        Rx = self.Cx / 2 / math.pi
-        Ry = self.Cy / 2 / math.pi
-        mx = math.atan2(dx, Rx) * Rx
-        my = (math.atan2(dy, math.sqrt(dx * dx + Rx * Rx))) * Ry
-        return mx, my
 
     def process(self):
         hsv = cv2.cvtColor(self.grabber.get_screen(), cv2.COLOR_BGR2HSV)
@@ -87,11 +60,16 @@ class Colorbot:
             center = (x + w // 2, y + h // 2)
             cX = center[0]
             cY = y + int(h * self.TARGET_OFFSET)
+            x_diff = cX - self.grabber.xfov // 2
+            y_diff = cY - self.grabber.yfov // 2
 
-            # Use fov to calculate mouse movement
-            mx, my = self.fov(cX, cY, self.grabber.xfov, self.grabber.yfov)
+            # Calculate mouse movement based on FOV
+            mx, my = self.calculate_fov(x_diff, y_diff)
             self.mouse.move(mx, my)
 
-# Example usage with auto-detected screen resolution and game FOV of 103
-colorbot = Colorbot(0, 0, game_fov=103)
-colorbot.listen()
+    def calculate_fov(self, x_diff, y_diff):
+        # Adjust this based on your game's FOV
+        # Example for converting screen offsets to mouse movement
+        dx = x_diff * 2  # Adjust scaling factor as needed
+        dy = y_diff * 2  # Adjust scaling factor as needed
+        return dx, dy

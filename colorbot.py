@@ -15,8 +15,7 @@ class Colorbot:
         self.configure()
 
     def configure(self):
-        self.xspeed = lambda: self.settings.get_float('AIMBOT', 'xSpeed')
-        self.yspeed = lambda: self.settings.get_float('AIMBOT', 'ySpeed')
+        self.sensitivity = float(self.settings.get('AIMBOT', 'aimSpeed'))
         self.AIMBOT_KEY = int(self.settings.get('AIMBOT', 'toggleKey'), 16)
         self.ALT_AIMBOT_KEY = int(self.settings.get('AIMBOT', 'altToggleKey'), 16)
         self.TARGET_OFFSET = float(self.settings.get('AIMBOT', 'targetOffset'))
@@ -26,7 +25,7 @@ class Colorbot:
         lower_color = np.array([140, 120, 180])
         upper_color = np.array([160, 200, 255])
         return lower_color, upper_color
-
+        
     def listen(self):
         while True:
             if win32api.GetAsyncKeyState(self.AIMBOT_KEY) < 0 or win32api.GetAsyncKeyState(self.ALT_AIMBOT_KEY) < 0:
@@ -60,4 +59,10 @@ class Colorbot:
             cY = y + int(h * self.TARGET_OFFSET)
             x_diff = cX - self.grabber.xfov // 2
             y_diff = cY - self.grabber.yfov // 2
-            self.mouse.move(self.xspeed() * x_diff, self.yspeed() * y_diff)
+
+            # Adjust sensitivity calculation
+            sensitivity_x = self.sensitivity * (self.FOV / 90)  # Adjust based on the FOV
+            sensitivity_y = self.sensitivity * (self.FOV / 90)  # Adjust based on the FOV
+
+            # Move the mouse with adjusted sensitivity
+            self.mouse.move(sensitivity_x * x_diff, sensitivity_y * y_diff)

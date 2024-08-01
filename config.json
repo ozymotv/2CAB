@@ -1,14 +1,13 @@
 {
-  "kmNet": {
-    "ip": "192.168.2.188",
-    "port": "port",
-    "uid": "uuid"
-  },
-  "movement": {
-    "defaultSpeed": 6.50,
-    "defaultFOV": 3
-  },
-  "triggerKey": {
-    "keyCode": "0x01"
-  }
+  "ip": "192.168.2.188",
+  "port": "16896",
+  "uid": "46405C53",
+  "trigger_delay": 0,
+  "base_delay": 0,
+  "color_tolerance": 50,
+  "target_color": [250, 100, 250],
+  "scope_color": [0, 255, 0],
+  "scope_color_tolerance": 50,
+  "scope_color_alt": [0, 255, 255],
+  "scope_color_tolerance_alt": 40
 }

@@ -10,7 +10,7 @@ from settings import Settings
 class Colorbot:
     settings = Settings()
 
-    def __init__(self, x, y, xfov=None, yfov=None):
+    def __init__(self, x, y, xfov=None, yfov=None, game_fov=103):
         self.settings = Settings()
         self.mouse = Mouse()
 
@@ -25,6 +25,9 @@ class Colorbot:
         self.toggled = False
         self.configure()
 
+        # Calculate Cx and Cy based on the game's FOV
+        self.Cx, self.Cy = self.calculate_fov_constants(game_fov, xfov, yfov)
+
     def configure(self):
         self.AIMBOT_KEY = int(self.settings.get('AIMBOT', 'toggleKey'), 16)
         self.ALT_AIMBOT_KEY = int(self.settings.get('AIMBOT', 'altToggleKey'), 16)
@@ -34,17 +37,26 @@ class Colorbot:
         lower_color = np.array([140, 120, 180])
         upper_color = np.array([160, 200, 255])
         return lower_color, upper_color
-        
+
+    def calculate_fov_constants(self, fov_degrees, screen_width, screen_height):
+        # Convert FOV from degrees to radians
+        fov_radians = fov_degrees * math.pi / 180
+
+        # Calculate Cx and Cy based on the screen dimensions and FOV
+        Cx = screen_width / (2 * math.tan(fov_radians / 2))
+        Cy = screen_height / (2 * math.tan(fov_radians / 2))
+        return Cx, Cy
+
     def listen(self):
         while True:
             if win32api.GetAsyncKeyState(self.AIMBOT_KEY) < 0 or win32api.GetAsyncKeyState(self.ALT_AIMBOT_KEY) < 0:
                 self.process()
 
-    def fov(self, ax, ay, px, py, Cx, Cy):
-        dx = (ax - px / 2) * 3
-        dy = (ay - py / 2) * 2.25
-        Rx = Cx / 2 / math.pi
-        Ry = Cy / 2 / math.pi
+    def fov(self, ax, ay, px, py):
+        dx = (ax - px / 2) * 1.5
+        dy = (ay - py / 2) * 1.5
+        Rx = self.Cx / 2 / math.pi
+        Ry = self.Cy / 2 / math.pi
         mx = math.atan2(dx, Rx) * Rx
         my = (math.atan2(dy, math.sqrt(dx * dx + Rx * Rx))) * Ry
         return mx, my
@@ -77,9 +89,9 @@ class Colorbot:
             cY = y + int(h * self.TARGET_OFFSET)
 
             # Use fov to calculate mouse movement
-            mx, my = self.fov(cX, cY, self.grabber.xfov, self.grabber.yfov, 5140, 5140)  # Cx and Cy are placeholders
+            mx, my = self.fov(cX, cY, self.grabber.xfov, self.grabber.yfov)
             self.mouse.move(mx, my)
 
-# Example usage with auto-detected screen resolution
-colorbot = Colorbot(0, 0)
+# Example usage with auto-detected screen resolution and game FOV of 103
+colorbot = Colorbot(0, 0, game_fov=103)
 colorbot.listen()

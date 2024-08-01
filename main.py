@@ -1,4 +1,7 @@
-import pyautogui, ctypes, os
+import pyautogui
+import ctypes
+from ctypes import windll, wintypes
+import os
 from colorbot import Colorbot
 from settings import Settings
 
@@ -15,11 +18,10 @@ class Main:
         hwnd = ctypes.windll.kernel32.GetConsoleWindow()
         if hwnd:
             style = ctypes.windll.user32.GetWindowLongW(hwnd, -16)
-            style &= -262145
-            style &= -65537
+            style &= ~0x00040000  # WS_MAXIMIZEBOX
+            style &= ~0x00020000  # WS_MINIMIZEBOX
             ctypes.windll.user32.SetWindowLongW(hwnd, -16, style)
         STD_OUTPUT_HANDLE_ID = ctypes.c_ulong(4294967285)
-        windll = ctypes.windll.kernel32
         handle = windll.GetStdHandle(STD_OUTPUT_HANDLE_ID)
         rect = ctypes.wintypes.SMALL_RECT(0, 0, width - 1, height - 1)
         windll.SetConsoleScreenBufferSize(handle, ctypes.wintypes._COORD(width, height))

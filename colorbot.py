@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import win32api
+import logging
 from capture import Capture
 from mouse import Mouse
 from settings import Settings
@@ -47,38 +48,31 @@ class Colorbot:
         if self.toggled:
             return
 
-        hsv = cv2.cvtColor(self.grabber.get_new_frame(), cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(hsv, self.LOWER_COLOR, self.UPPER_COLOR)
-        kernel = np.ones((3, 3), np.uint8)
-        dilated = cv2.dilate(mask, kernel, iterations=5)
-        thresh = cv2.threshold(dilated, 60, 255, cv2.THRESH_BINARY)[1]
-        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        try:
+            hsv = cv2.cvtColor(self.grabber.get_new_frame(), cv2.COLOR_BGR2HSV)
+            mask = cv2.inRange(hsv, self.LOWER_COLOR, self.UPPER_COLOR)
+            kernel = np.ones((3, 3), np.uint8)
+            dilated = cv2.dilate(mask, kernel, iterations=5)
+            thresh = cv2.threshold(dilated, 60, 255, cv2.THRESH_BINARY)[1]
+            contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-        if contours:
-            screen_center = (self.xfov // 2, self.yfov // 2)
-            min_distance = float('inf')
-            closest_contour = None
+            if contours:
+                screen_center = (self.xfov // 2, self.yfov // 2)
+                closest_contour = min(contours, key=lambda cnt: cv2.pointPolygonTest(cnt, screen_center, True))
 
-            for contour in contours:
-                x, y, w, h = cv2.boundingRect(contour)
-                center = (x + w // 2, y + h // 2)
-                distance = ((center[0] - screen_center[0]) ** 2 + (center[1] - screen_center[1]) ** 2) ** 0.5
+                if closest_contour is not None:
+                    x, y, w, h = cv2.boundingRect(closest_contour)
+                    center = (x + w // 2, y + h // 2)
+                    cX = center[0]
+                    cY = y + int(h * self.TARGET_OFFSET)
+                    x_diff = cX - self.xfov // 2
+                    y_diff = cY - self.yfov // 2
 
-                if distance < min_distance:
-                    min_distance = distance
-                    closest_contour = contour
+                    # Adjust sensitivity calculation
+                    sensitivity_x = self.sensitivity * (self.FOV / 90)
+                    sensitivity_y = self.sensitivity * (self.FOV / 90)
 
-            if closest_contour is not None:
-                x, y, w, h = cv2.boundingRect(closest_contour)
-                center = (x + w // 2, y + h // 2)
-                cX = center[0]
-                cY = y + int(h * self.TARGET_OFFSET)
-                x_diff = cX - self.xfov // 2
-                y_diff = cY - self.yfov // 2
-
-                # Adjust sensitivity calculation
-                sensitivity_x = self.sensitivity * (self.FOV / 90)  # Adjust based on the FOV
-                sensitivity_y = self.sensitivity * (self.FOV / 90)  # Adjust based on the FOV
-
-                # Move the mouse with adjusted sensitivity
-                self.mouse.move(sensitivity_x * x_diff, sensitivity_y * y_diff)
+                    # Move the mouse with adjusted sensitivity
+                    self.mouse.move(sensitivity_x * x_diff, sensitivity_y * y_diff)
+        except Exception as e:
+            logging.error(f"Error in process: {e}")

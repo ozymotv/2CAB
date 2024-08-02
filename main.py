@@ -1,15 +1,17 @@
-import pyautogui
 import ctypes
 import ctypes.wintypes as wintypes
 import os
-from colorbot import Colorbot
 from settings import Settings
+from colorbot import Colorbot
+from capture import Capture
 
 class Main:
     def __init__(self):
         self.settings = Settings()
-        self.monitor = pyautogui.size()
-        self.CENTER_X, self.CENTER_Y = self.monitor.width // 2, self.monitor.height // 2
+        self.capture = Capture()  # Instantiate the new Capture class
+        self.capture.start()  # Start the capture thread
+        
+        self.CENTER_X, self.CENTER_Y = self.capture.screen_x_center, self.capture.screen_y_center
         self.XFOV = self.settings.get_int('AIMBOT', 'xFov')
         self.YFOV = self.settings.get_int('AIMBOT', 'yFov')
         self.colorbot = Colorbot(self.CENTER_X - self.XFOV // 2, self.CENTER_Y - self.YFOV // 2, self.XFOV, self.YFOV)
@@ -21,7 +23,7 @@ class Main:
             style &= ~0x00080000  # Remove WS_MAXIMIZEBOX
             style &= ~0x00C00000  # Remove WS_SIZEBOX
             ctypes.windll.user32.SetWindowLongW(hwnd, -16, style)
-
+        
         STD_OUTPUT_HANDLE_ID = -11
         windll = ctypes.windll.kernel32
         handle = windll.GetStdHandle(STD_OUTPUT_HANDLE_ID)
@@ -36,6 +38,10 @@ class Main:
         rect = wintypes.SMALL_RECT(0, 0, width - 1, height - 1)
         windll.SetConsoleWindowInfo(handle, True, ctypes.byref(rect))
 
+        ctypes.windll.user32.ShowWindow(hwnd, 3)
+        ctypes.windll.kernel32.SetConsoleTitleW(f"Sunone Aimbot - {width}x{height}")
+        os.system(f"mode con: cols={width} lines={height}")
+
     def info(self):
         os.system('cls')
         print('github.com/kaanosu/ValorantArduinoColorbot\n')
@@ -47,4 +53,5 @@ class Main:
         self.colorbot.listen()
 
 if __name__ == '__main__':
-    Main().run()
+    main = Main()
+    main.run()

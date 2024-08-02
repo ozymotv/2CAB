@@ -149,7 +149,7 @@ class Capture(threading.Thread):
         except:
             print('(version file is not found)')
 
-        print(f'Sunone Aimbot is started! (Version {version})\n\n',
+        print(f'(Version {version})\n\n',
               'Hotkeys:\n',
               f'[{self.settings.get("Hotkeys", "hotkey_targeting")}] - Aiming at the target\n',
               f'[{self.settings.get("Hotkeys", "hotkey_exit")}] - EXIT\n',

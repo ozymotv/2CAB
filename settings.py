@@ -1,4 +1,5 @@
 import configparser
+import logging
 
 class Settings:
     def __init__(self, config_file='settings.ini'):
@@ -8,14 +9,18 @@ class Settings:
 
     def _get_cached(self, section, key, default=None, cast_func=str):
         if (section, key) not in self._cache:
-            if cast_func == self.config.getboolean:
-                # Special case for boolean values
-                value = self.config.getboolean(section, key)
-            else:
-                # Default case for other types
-                value = self.config.get(section, key, fallback=default)
-                value = cast_func(value)
-            self._cache[(section, key)] = value
+            try:
+                if cast_func == self.config.getboolean:
+                    # Special case for boolean values
+                    value = self.config.getboolean(section, key)
+                else:
+                    # Default case for other types
+                    value = self.config.get(section, key, fallback=default)
+                    value = cast_func(value)
+                self._cache[(section, key)] = value
+            except Exception as e:
+                logging.error(f"Error reading {section}/{key}: {e}")
+                return default
         return self._cache[(section, key)]
 
     def get(self, section, key, default=None):
@@ -39,8 +44,12 @@ class Settings:
         if not self.config.has_section(section):
             self.config.add_section(section)
         self.config.set(section, key, str(value))
+        self._cache[(section, key)] = value
 
     def save(self, config_file='settings.ini'):
         """Save the current configuration to a file."""
-        with open(config_file, 'w') as f:
-            self.config.write(f)
+        try:
+            with open(config_file, 'w') as f:
+                self.config.write(f)
+        except Exception as e:
+            logging.error(f"Error saving config: {e}")

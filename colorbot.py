@@ -15,17 +15,17 @@ class Colorbot:
         self.configure()
 
     def configure(self):
-        self.sensitivity = float(self.settings.get('AIMBOT', 'aimSpeed'))
-        self.AIMBOT_KEY = int(self.settings.get('AIMBOT', 'toggleKey'), 16)
-        self.ALT_AIMBOT_KEY = int(self.settings.get('AIMBOT', 'altToggleKey'), 16)
-        self.TARGET_OFFSET = float(self.settings.get('AIMBOT', 'targetOffset'))
-        self.FOV = float(self.settings.get('AIMBOT', 'fov'))
+        self.sensitivity = self.settings.get_float('AIMBOT', 'aimSpeed')
+        self.AIMBOT_KEY = self.settings.get_int('AIMBOT', 'toggleKey')
+        self.ALT_AIMBOT_KEY = self.settings.get_int('AIMBOT', 'altToggleKey')
+        self.TARGET_OFFSET = self.settings.get_float('AIMBOT', 'targetOffset')
+        self.FOV = self.settings.get_float('AIMBOT', 'fov')
 
     def get_colors(self):
         lower_color = np.array([140, 120, 180])
         upper_color = np.array([160, 200, 255])
         return lower_color, upper_color
-        
+
     def listen(self):
         while True:
             if win32api.GetAsyncKeyState(self.AIMBOT_KEY) < 0 or win32api.GetAsyncKeyState(self.ALT_AIMBOT_KEY) < 0:

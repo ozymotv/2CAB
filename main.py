@@ -12,7 +12,7 @@ class Main:
         self.CENTER_X, self.CENTER_Y = self.monitor.width // 2, self.monitor.height // 2
         self.XFOV = self.settings.get_int('AIMBOT', 'xFov')
         self.YFOV = self.settings.get_int('AIMBOT', 'yFov')
-        self.Colorbot = Colorbot(self.CENTER_X - self.XFOV // 2, self.CENTER_Y - self.YFOV // 2, self.XFOV, self.YFOV)
+        self.colorbot = Colorbot(self.CENTER_X - self.XFOV // 2, self.CENTER_Y - self.YFOV // 2, self.XFOV, self.YFOV)
 
     def better_cmd(self, width, height):
         hwnd = ctypes.windll.kernel32.GetConsoleWindow()
@@ -21,11 +21,11 @@ class Main:
             style &= ~0x00080000  # Remove WS_MAXIMIZEBOX
             style &= ~0x00C00000  # Remove WS_SIZEBOX
             ctypes.windll.user32.SetWindowLongW(hwnd, -16, style)
-        
+
         STD_OUTPUT_HANDLE_ID = -11
         windll = ctypes.windll.kernel32
         handle = windll.GetStdHandle(STD_OUTPUT_HANDLE_ID)
-        
+
         if not handle:
             raise Exception("Failed to get standard output handle")
 
@@ -44,7 +44,7 @@ class Main:
     def run(self):
         self.better_cmd(120, 30)
         self.info()
-        self.Colorbot.listen()
+        self.colorbot.listen()
 
 if __name__ == '__main__':
     Main().run()
